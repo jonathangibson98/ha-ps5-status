@@ -1,0 +1,78 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Pick your PS5",
+        "description": "These consoles answered on your network. Pick yours, or type its IP address.",
+        "data": {
+          "host": "Console"
+        }
+      },
+      "manual": {
+        "title": "PS5 IP address",
+        "description": "Type the console's IP address (Settings > Network > View Connection Status on the PS5). Give it a fixed IP in your router so it doesn't change. The PS5 must be on, or in rest mode with \"Stay Connected to the Internet\" turned on.",
+        "data": {
+          "host": "IP address"
+        }
+      },
+      "psn": {
+        "title": "Game and picture",
+        "description": "The PS5 doesn't tell the local network what's playing, so the game and its picture come from the PlayStation Network integration. Pick its media player for {name} (set up PlayStation Network first). Leave it empty for power only.",
+        "data": {
+          "psn_entity": "PlayStation Network media player"
+        }
+      }
+    },
+    "error": {
+      "no_answer": "No PS5 answered at that address. Check the IP, and that the console is on or in rest mode with Stay Connected to the Internet turned on."
+    },
+    "abort": {
+      "already_configured": "That PS5 is already set up.",
+      "no_answer": "The PS5 stopped answering. Make sure it's on and try again."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "PS5 Status options",
+        "data": {
+          "psn_entity": "PlayStation Network media player",
+          "scan_interval": "Check every",
+          "off_after": "Missed answers before it counts as off"
+        },
+        "data_description": {
+          "psn_entity": "Where the game and picture come from. Empty for power only.",
+          "off_after": "One dropped network packet shouldn't flip it off. 3 checks at 5 seconds means about 15 seconds."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "power": {
+        "name": "Power",
+        "state": {
+          "on": "On",
+          "rest": "Rest mode",
+          "off": "Off"
+        }
+      },
+      "now_playing": {
+        "name": "Now playing"
+      }
+    },
+    "binary_sensor": {
+      "awake": {
+        "name": "Awake"
+      },
+      "playing": {
+        "name": "Playing a game"
+      }
+    },
+    "image": {
+      "game_image": {
+        "name": "Game picture"
+      }
+    }
+  }
+}
