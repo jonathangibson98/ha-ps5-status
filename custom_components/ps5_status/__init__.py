@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 
 from .coordinator import Ps5Coordinator
 
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.IMAGE, Platform.MEDIA_PLAYER, Platform.SENSOR]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.BUTTON, Platform.IMAGE, Platform.MEDIA_PLAYER, Platform.SENSOR]
 
 type Ps5ConfigEntry = ConfigEntry[Ps5Coordinator]
 

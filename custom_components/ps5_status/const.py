@@ -1,7 +1,10 @@
 """Constants for PS5 Status."""
 DOMAIN = "ps5_status"
 
-CONF_PSN_ENTITY = "psn_entity"
+CONF_PSN_ENTITY = "psn_entity"  # the media player the game comes from (any media player)
+CONF_REGIST_KEY = "regist_key"  # from Remote Play linking: lets it turn the PS5 on
+CONF_ACCOUNT_ID = "account_id"
+CONF_PIN = "pin"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_OFF_AFTER = "off_after"
 

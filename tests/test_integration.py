@@ -70,7 +70,6 @@ async def test_entities_follow_console(hass):
         assert st("binary_sensor.ps5_512_playing_a_game").state == "on"
         img = st("image.ps5_512_game_picture")
         assert img.state != "unavailable"
-        assert hass.data["image"].get_entity("image.ps5_512_game_picture").image_url == ART
 
         # game changes on PSN: picked up straight away, without waiting for the next check
         hass.states.async_set(PSN, "playing", {"media_title": "EA FC 26", "entity_picture": ART + "?fc"})
@@ -122,9 +121,101 @@ async def test_options(hass):
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
         r = await hass.config_entries.options.async_init(entry.entry_id)
-        assert r["step_id"] == "init"
+        assert r["type"] is FlowResultType.MENU and r["menu_options"] == ["settings", "link"]
+        r = await hass.config_entries.options.async_configure(r["flow_id"], {"next_step_id": "settings"})
         r = await hass.config_entries.options.async_configure(r["flow_id"], {CONF_PSN_ENTITY: PSN, "scan_interval": 10, "off_after": 2})
         assert r["type"] is FlowResultType.CREATE_ENTRY
         await hass.async_block_till_done()
         assert entry.options[CONF_PSN_ENTITY] == PSN and entry.runtime_data.update_interval == timedelta(seconds=10)
         assert entry.runtime_data.psn_entity == PSN
+
+
+class FakeSource:
+    """Stands in for any media player (not PSN): only its picture fetch is needed."""
+
+    def __init__(self):
+        self.calls = 0
+
+    async def async_get_media_image(self):
+        self.calls += 1
+        return b"\x89PNG-game-art", "image/png"
+
+
+async def test_any_media_player_source_and_picture(hass):
+    from homeassistant.components.image import async_get_image
+
+    src = "media_player.living_room_tv"
+    hass.states.async_set(src, "playing", {"app_name": "Astro Bot", "entity_picture": "/api/media_player_proxy/media_player.living_room_tv?token=x&cache=1"})
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="0C7043751C7E", title="PS5-512",
+                            data={CONF_HOST: "192.168.86.40"}, options={CONF_PSN_ENTITY: src, "scan_interval": 5, "off_after": 3})
+    entry.add_to_hass(hass)
+    fake = FakeSource()
+    with patch("custom_components.ps5_status.coordinator.async_query", return_value=AWAKE), \
+         patch("custom_components.ps5_status.coordinator.Ps5Coordinator.source_entity", return_value=fake):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+        assert hass.states.get("sensor.ps5_512_now_playing").state == "Astro Bot"  # app_name when there's no media_title
+        image = await async_get_image(hass, "image.ps5_512_game_picture")
+        assert image.content == b"\x89PNG-game-art" and image.content_type == "image/png"
+        player = hass.data["media_player"].get_entity("media_player.ps5_512")
+        assert await player.async_get_media_image() == (b"\x89PNG-game-art", "image/png")
+        # no turn-on until linked
+        assert hass.states.get("media_player.ps5_512").attributes["supported_features"] == 0
+        assert hass.states.get("button.ps5_512_turn_on") is None
+
+
+async def test_link_then_turn_on(hass):
+    hass.states.async_set(PSN, "on", {})
+    psn_entry = MockConfigEntry(domain="playstation_network", unique_id="1234567890123456789", title="JonG98")
+    psn_entry.add_to_hass(hass)
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="0C7043751C7E", title="PS5-512",
+                            data={CONF_HOST: "192.168.86.40"}, options={CONF_PSN_ENTITY: PSN, "scan_interval": 5, "off_after": 3})
+    entry.add_to_hass(hass)
+    answer = {"r": REST}
+
+    async def fake_query(host, *a, **k):
+        return answer["r"]
+
+    with patch("custom_components.ps5_status.coordinator.async_query", side_effect=fake_query):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+        r = await hass.config_entries.options.async_init(entry.entry_id)
+        r = await hass.config_entries.options.async_configure(r["flow_id"], {"next_step_id": "link"})
+        assert r["step_id"] == "link"
+        # a wrong code
+        from custom_components.ps5_status.remoteplay import RemotePlayError
+        with patch("custom_components.ps5_status.config_flow.async_register", side_effect=RemotePlayError("The PS5 refused the code.")):
+            r = await hass.config_entries.options.async_configure(r["flow_id"], {"account_id": "1234567890123456789", "pin": "11112222"})
+        assert r["errors"] == {"base": "link_failed"} and r["description_placeholders"]["error"] == "The PS5 refused the code."
+        with patch("custom_components.ps5_status.config_flow.async_register",
+                   return_value={"PS5-RegistKey": "3361613562383339", "PS5-Nickname": "PS5-512"}) as reg:
+            r = await hass.config_entries.options.async_configure(r["flow_id"], {"account_id": "1234567890123456789", "pin": "12345678"})
+        assert r["type"] is FlowResultType.CREATE_ENTRY
+        assert reg.call_args.args == ("192.168.86.40", "1234567890123456789", "12345678")
+        await hass.async_block_till_done()
+        assert entry.data["regist_key"] == "3361613562383339"
+        assert hass.states.get("media_player.ps5_512").attributes["supported_features"] == 128  # TURN_ON
+
+        woke = []
+
+        async def fake_wake(host, key, *a, **k):
+            woke.append((host, key))
+            answer["r"] = AWAKE
+
+        with patch("custom_components.ps5_status.media_player.async_wake", side_effect=fake_wake), \
+             patch("custom_components.ps5_status.media_player.asyncio.sleep", return_value=None):
+            await hass.services.async_call("media_player", "turn_on", {"entity_id": "media_player.ps5_512"}, blocking=True)
+            await hass.async_block_till_done()
+            assert woke == [("192.168.86.40", "3361613562383339")]
+            assert hass.states.get("sensor.ps5_512_power").state == "on"
+            answer["r"] = REST
+            await hass.services.async_call("button", "press", {"entity_id": "button.ps5_512_turn_on"}, blocking=True)
+            await hass.async_block_till_done()
+            assert len(woke) == 2
+
+        # unlink
+        r = await hass.config_entries.options.async_init(entry.entry_id)
+        assert "unlink" in r["menu_options"]
+        r = await hass.config_entries.options.async_configure(r["flow_id"], {"next_step_id": "unlink"})
+        await hass.async_block_till_done()
+        assert "regist_key" not in entry.data and hass.states.get("media_player.ps5_512").attributes["supported_features"] == 0

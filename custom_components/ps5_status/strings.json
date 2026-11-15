@@ -16,10 +16,10 @@
         }
       },
       "psn": {
-        "title": "Game and picture",
-        "description": "The PS5 doesn't tell the local network what's playing, so the game and its picture come from the PlayStation Network integration. Pick its media player for {name} (set up PlayStation Network first). Leave it empty for power only.",
+        "title": "What's playing",
+        "description": "The PS5 doesn't tell the local network what's playing, so the game and its picture come from a media player. Usually that's the PlayStation Network integration's player for {name}, but any media player works (a TV, a universal media player). Leave it empty for power only.",
         "data": {
-          "psn_entity": "PlayStation Network media player"
+          "psn_entity": "Game source media player"
         }
       }
     },
@@ -34,18 +34,39 @@
   "options": {
     "step": {
       "init": {
-        "title": "PS5 Status options",
+        "title": "PS5 Status",
+        "menu_options": {
+          "settings": "Game source and checking",
+          "link": "Link for turning on",
+          "unlink": "Unlink (stop turning on)"
+        }
+      },
+      "settings": {
+        "title": "Game source and checking",
         "data": {
-          "psn_entity": "PlayStation Network media player",
+          "psn_entity": "Game source media player",
           "scan_interval": "Check every",
           "off_after": "Missed answers before it counts as off"
         },
         "data_description": {
-          "psn_entity": "Where the game and picture come from. Empty for power only.",
+          "psn_entity": "Where the game and picture come from: PlayStation Network's console player, or any media player. Empty for power only.",
           "off_after": "One dropped network packet shouldn't flip it off. 3 checks at 5 seconds means about 15 seconds."
         }
+      },
+      "link": {
+        "title": "Link for turning on",
+        "description": "To turn the PS5 on, Home Assistant links with it like the PS Remote Play app does (once).\n\n1. On the PS5: **Settings > System > Remote Play > Link Device**. It shows an 8-digit code.\n2. Pick your PSN account (filled in from the PlayStation Network integration) or type your PSN account ID number.\n3. Type the code and submit while it's still on screen.\n\nThe PS5 must be on and Remote Play turned on (Settings > System > Remote Play > Enable Remote Play).",
+        "data": {
+          "account_id": "PSN account",
+          "pin": "8-digit code from the PS5"
+        }
       }
-    }
+    },
+    "error": {
+      "link_failed": "{error}",
+      "bad_account": "The PSN account ID is a long number. Pick your account from the list or set up the PlayStation Network integration."
+    },
+    "abort": {}
   },
   "entity": {
     "sensor": {
@@ -72,6 +93,11 @@
     "image": {
       "game_image": {
         "name": "Game picture"
+      }
+    },
+    "button": {
+      "turn_on": {
+        "name": "Turn on"
       }
     }
   }

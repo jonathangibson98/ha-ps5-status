@@ -13,6 +13,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     CONF_OFF_AFTER,
+    CONF_REGIST_KEY,
     CONF_PSN_ENTITY,
     CONF_SCAN_INTERVAL,
     DEFAULT_OFF_AFTER,
@@ -36,7 +37,7 @@ class Ps5Data:
     host_id: str | None = None
     system_version: str | None = None
     game: str | None = None
-    game_image: str | None = None
+    game_image: str | None = None  # changes whenever the source's picture changes; the picture is fetched through HA
     psn_available: bool = False
 
 
@@ -59,6 +60,7 @@ class Ps5Coordinator(DataUpdateCoordinator[Ps5Data]):
         self._misses = 0
         self._last: DdpReply | None = None
         self.host_id: str | None = entry.unique_id
+        self.regist_key: str | None = entry.data.get(CONF_REGIST_KEY) or None
 
     async def _async_setup(self) -> None:
         if self.psn_entity:
@@ -104,24 +106,33 @@ class Ps5Coordinator(DataUpdateCoordinator[Ps5Data]):
         return st is not None and st.state not in ("unavailable", "unknown")
 
     def _psn_game(self) -> tuple[str | None, str | None, bool]:
-        """(game title, picture URL, PSN entity usable) from the PlayStation Network media player."""
+        """(title, picture token, source usable) from the chosen media player: PlayStation Network's console player,
+        or any other media player (a TV, a universal player...)."""
         if not self.psn_entity:
             return None, None, False
         st = self.hass.states.get(self.psn_entity)
         if st is None or st.state in ("unavailable", "unknown"):
             return None, None, False
-        title = st.attributes.get("media_title")
+        title = st.attributes.get("media_title") or st.attributes.get("app_name")
         if st.state != STATE_PLAYING and not title:
             return None, None, True
-        return title or None, self._psn_picture(st), True
-
-    def _psn_picture(self, st) -> str | None:
-        # The PSN media player keeps the game art on Sony's servers; its state only holds a proxied link, so read
-        # the URL from the entity itself when we can.
-        component = self.hass.data.get("media_player")
-        entity = component.get_entity(self.psn_entity) if component is not None and hasattr(component, "get_entity") else None
-        url = getattr(entity, "media_image_url", None) if entity is not None else None
-        if url:
-            return str(url)
         pic = st.attributes.get("entity_picture")
-        return pic if isinstance(pic, str) and pic.startswith("http") else None
+        return title or None, (pic if title and isinstance(pic, str) and pic else None), True
+
+    def source_entity(self):
+        """The chosen media player's entity object, to fetch its picture through Home Assistant."""
+        component = self.hass.data.get("media_player")
+        if not self.psn_entity or component is None or not hasattr(component, "get_entity"):
+            return None
+        return component.get_entity(self.psn_entity)
+
+    async def async_source_image(self) -> tuple[bytes | None, str | None]:
+        """The game picture, fetched the way the source media player's own card fetches it."""
+        entity = self.source_entity()
+        if entity is None or not self.data or not self.data.game_image:
+            return None, None
+        try:
+            return await entity.async_get_media_image()
+        except Exception:  # noqa: BLE001 - a picture that can't be fetched just isn't shown
+            _LOGGER.debug("Couldn't fetch the picture from %s", self.psn_entity, exc_info=True)
+            return None, None

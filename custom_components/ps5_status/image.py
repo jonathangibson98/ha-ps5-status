@@ -20,17 +20,22 @@ class Ps5GameImage(Ps5Entity, ImageEntity):
     def __init__(self, hass: HomeAssistant, coordinator) -> None:
         Ps5Entity.__init__(self, coordinator, "game_image")
         ImageEntity.__init__(self, hass)
-        self._attr_image_url = coordinator.data.game_image
+        self._token = coordinator.data.game_image
         self._attr_image_last_updated = dt_util.utcnow()
+        self._attr_content_type = "image/jpeg"
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        url = self.coordinator.data.game_image
-        if url != self._attr_image_url:
-            self._attr_image_url = url
-            self._cached_image = None
+        if self.coordinator.data.game_image != self._token:
+            self._token = self.coordinator.data.game_image
             self._attr_image_last_updated = dt_util.utcnow()
         super()._handle_coordinator_update()
+
+    async def async_image(self) -> bytes | None:
+        data, ctype = await self.coordinator.async_source_image()
+        if ctype:
+            self._attr_content_type = ctype
+        return data
 
     @property
     def available(self) -> bool:

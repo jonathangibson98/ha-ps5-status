@@ -42,7 +42,3 @@ class Ps5GameSensor(Ps5Entity, SensorEntity):
     @property
     def native_value(self) -> str | None:
         return self.coordinator.data.game
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        return {"image": self.coordinator.data.game_image}
