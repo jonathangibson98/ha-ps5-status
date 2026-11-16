@@ -41,6 +41,10 @@ def _psn_selector() -> selector.EntitySelector:
     return selector.EntitySelector(selector.EntitySelectorConfig(domain="media_player"))
 
 
+# links go in as placeholders: Home Assistant doesn't allow URLs inside translation strings
+LINKS = {"psn_url": "https://www.playstation.com", "npsso_url": "https://ca.account.sony.com/api/v1/ssocookie"}
+
+
 def _npsso_selector() -> selector.TextSelector:
     return selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD))
 
@@ -139,7 +143,7 @@ class Ps5StatusConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_NPSSO): _npsso_selector(),
             }),
             errors=errors,
-            description_placeholders={"name": self._name},
+            description_placeholders={"name": self._name, **LINKS},
         )
 
     @staticmethod
@@ -178,6 +182,7 @@ class Ps5StatusOptionsFlow(OptionsFlow):
                 vol.Required(CONF_NPSSO): _npsso_selector(),
             }),
             errors=errors,
+            description_placeholders=LINKS,
         )
 
     async def async_step_remove_account(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
