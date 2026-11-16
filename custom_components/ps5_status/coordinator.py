@@ -20,7 +20,9 @@ from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
+    CONF_ACCOUNT_ID,
     CONF_ACCOUNTS,
+    CONF_FRIEND_OF,
     CONF_NAME,
     CONF_NPSSO,
     CONF_OFF_AFTER,
@@ -65,6 +67,8 @@ class _Player:
     account: PsnAccount
     presence: Presence | None = None
     problem: str | None = None
+    account_id: str = "me"   # a friend's account ID, asked through `account`
+    friend: bool = False
 
 
 class Ps5Coordinator(DataUpdateCoordinator[Ps5Data]):
@@ -89,10 +93,17 @@ class Ps5Coordinator(DataUpdateCoordinator[Ps5Data]):
         self.host_id: str | None = entry.unique_id
         self.regist_key: str | None = entry.data.get(CONF_REGIST_KEY) or None
         session = async_get_clientsession(hass)
+        accounts = opts.get(CONF_ACCOUNTS) or []
         self.players: list[_Player] = [
             _Player(a.get(CONF_NAME) or "Player", PsnAccount(session, a[CONF_NPSSO]))
-            for a in opts.get(CONF_ACCOUNTS) or [] if a.get(CONF_NPSSO)
+            for a in accounts if a.get(CONF_NPSSO)
         ]
+        mine = {p.name: p.account for p in self.players}
+        for a in accounts:
+            via = mine.get(a.get(CONF_FRIEND_OF) or "")
+            if not a.get(CONF_NPSSO) and via and a.get(CONF_ACCOUNT_ID):
+                self.players.append(_Player(a.get(CONF_NAME) or "Friend", via, account_id=str(a[CONF_ACCOUNT_ID]),
+                                            friend=True))
         self._psn_checked = 0.0
         self._was_on = False
         self._image_cache: tuple[str, bytes, str] | None = None
@@ -103,6 +114,8 @@ class Ps5Coordinator(DataUpdateCoordinator[Ps5Data]):
 
     async def _async_setup(self) -> None:
         for p in self.players:
+            if p.friend:
+                continue
             try:
                 await p.account.async_login()
             except PsnAuthError as err:
@@ -150,7 +163,7 @@ class Ps5Coordinator(DataUpdateCoordinator[Ps5Data]):
         self._psn_checked = time.monotonic()
         for p in self.players:
             try:
-                p.presence = await p.account.async_presence()
+                p.presence = await p.account.async_presence(p.account_id)
                 p.problem = None
             except PsnAuthError as err:
                 p.presence, p.problem = None, f"{p.name}: NPSSO token expired, add it again ({err})"
@@ -178,8 +191,9 @@ class Ps5Coordinator(DataUpdateCoordinator[Ps5Data]):
         if power != POWER_ON:
             return {"psn_available": ok, "psn_problem": "; ".join(problems) or None}
         on_ps5 = [p for p in self.players if p.presence and p.presence.on_ps5]
-        gaming = [p for p in on_ps5 if p.presence.title]
-        who = (gaming or on_ps5 or [None])[0]
+        # your own accounts first: a friend on PS5 might be on their own console at their house
+        gaming = sorted((p for p in on_ps5 if p.presence.title), key=lambda p: p.friend)
+        who = (gaming or sorted(on_ps5, key=lambda p: p.friend) or [None])[0]
         pres = who.presence if who else None
         return {
             "game": pres.title if pres else None,

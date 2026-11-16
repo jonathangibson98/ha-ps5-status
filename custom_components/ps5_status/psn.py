@@ -11,6 +11,8 @@ import time
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+import asyncio
+
 import aiohttp
 
 _LOGGER = logging.getLogger(__name__)
@@ -19,7 +21,7 @@ AUTH_URL = "https://ca.account.sony.com/api/authz/v3/oauth/authorize"
 TOKEN_URL = "https://ca.account.sony.com/api/authz/v3/oauth/token"
 ACCOUNT_URL = "https://dms.api.playstation.com/api/v1/devices/accounts/me"
 PROFILE_URL = "https://us-prof.np.community.playstation.net/userProfile/v1/users/me/profile2"
-PRESENCE_URL = "https://m.np.playstation.com/api/userProfile/v1/internal/users/me/basicPresences"
+USERS_URL = "https://m.np.playstation.com/api/userProfile/v1/internal/users"
 
 # the PlayStation App's public client (the same one PSNAWP and the PlayStation Network integration use)
 CLIENT_ID = "09515159-7237-4370-9b40-3806e67c0891"
@@ -148,5 +150,21 @@ class PsnAccount:
         except PsnError:
             _LOGGER.debug("Couldn't read the PSN online ID", exc_info=True)
 
-    async def async_presence(self) -> Presence:
-        return parse_presence(await self._get(PRESENCE_URL, {"type": "primary"}))
+    async def async_presence(self, account_id: str = "me") -> Presence:
+        """What this account (or a friend of it, by account ID) is doing. Friends need their privacy settings to
+        let friends see their online status and what they're playing."""
+        return parse_presence(await self._get(f"{USERS_URL}/{account_id}/basicPresences", {"type": "primary"}))
+
+    async def async_friends(self) -> list[tuple[str, str]]:
+        """[(account ID, online ID)] for everyone on this account's friends list, sorted by name."""
+        ids = [str(i) for i in (await self._get(f"{USERS_URL}/me/friends", {"limit": "1000"})).get("friends") or []]
+        sem = asyncio.Semaphore(8)
+
+        async def name(aid: str) -> tuple[str, str]:
+            async with sem:
+                try:
+                    return aid, (await self._get(f"{USERS_URL}/{aid}/profiles")).get("onlineId") or aid
+                except PsnError:
+                    return aid, aid
+
+        return sorted(await asyncio.gather(*(name(i) for i in ids)), key=lambda f: f[1].lower())

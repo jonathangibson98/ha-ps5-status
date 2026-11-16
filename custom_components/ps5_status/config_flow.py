@@ -16,6 +16,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import (
     CONF_ACCOUNT_ID,
     CONF_ACCOUNTS,
+    CONF_FRIEND_OF,
     CONF_NAME,
     CONF_NPSSO,
     CONF_PSN_INTERVAL,
@@ -155,7 +156,10 @@ class Ps5StatusConfigFlow(ConfigFlow, domain=DOMAIN):
 class Ps5StatusOptionsFlow(OptionsFlow):
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         menu = ["add_account"]
-        if self.config_entry.options.get(CONF_ACCOUNTS):
+        accounts = self.config_entry.options.get(CONF_ACCOUNTS) or []
+        if any(a.get(CONF_NPSSO) for a in accounts):
+            menu.append("add_friend")
+        if accounts:
             menu.append("remove_account")
         menu += ["settings", "link"]
         if self.config_entry.data.get(CONF_REGIST_KEY):
@@ -185,11 +189,60 @@ class Ps5StatusOptionsFlow(OptionsFlow):
             description_placeholders=LINKS,
         )
 
+    async def async_step_add_friend(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Track a friend through one of your signed-in accounts, like the PlayStation Network integration does."""
+        mine = [a for a in self.config_entry.options.get(CONF_ACCOUNTS) or [] if a.get(CONF_NPSSO)]
+        if user_input is None and len(mine) == 1:
+            user_input = {CONF_FRIEND_OF: mine[0][CONF_NAME]}
+        if user_input is not None:
+            self._via = next(a for a in mine if a[CONF_NAME] == user_input[CONF_FRIEND_OF])
+            return await self.async_step_pick_friend()
+        return self.async_show_form(
+            step_id="add_friend",
+            data_schema=vol.Schema({vol.Required(CONF_FRIEND_OF): selector.SelectSelector(
+                selector.SelectSelectorConfig(options=[a[CONF_NAME] for a in mine], mode=selector.SelectSelectorMode.LIST))}),
+        )
+
+    async def async_step_pick_friend(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        if not getattr(self, "_friends", None):
+            acct = PsnAccount(async_get_clientsession(self.hass), self._via[CONF_NPSSO])
+            try:
+                self._friends = dict(await acct.async_friends())
+            except PsnAuthError:
+                return self.async_abort(reason="npsso_expired")
+            except PsnError:
+                return self.async_abort(reason="psn_down")
+            if not self._friends:
+                return self.async_abort(reason="no_friends")
+        if user_input is not None:
+            aid = user_input[CONF_ACCOUNT_ID]
+            name = (user_input.get(CONF_NAME) or "").strip() or self._friends.get(aid, aid)
+            taken = {a.get(CONF_NAME) for a in self.config_entry.options.get(CONF_ACCOUNTS) or []}
+            if name in taken:
+                errors[CONF_NAME] = "name_taken"
+            else:
+                friend = {CONF_NAME: name, CONF_FRIEND_OF: self._via[CONF_NAME], CONF_ACCOUNT_ID: aid,
+                          "online_id": self._friends.get(aid, "")}
+                return self._save(**{CONF_ACCOUNTS: [*(self.config_entry.options.get(CONF_ACCOUNTS) or []), friend]})
+        return self.async_show_form(
+            step_id="pick_friend",
+            data_schema=vol.Schema({
+                vol.Required(CONF_ACCOUNT_ID): selector.SelectSelector(selector.SelectSelectorConfig(
+                    options=[selector.SelectOptionDict(value=k, label=v) for k, v in self._friends.items()],
+                    mode=selector.SelectSelectorMode.DROPDOWN)),
+                vol.Optional(CONF_NAME, default=(user_input or {}).get(CONF_NAME, "")): str,
+            }),
+            errors=errors,
+            description_placeholders={"via": self._via[CONF_NAME]},
+        )
+
     async def async_step_remove_account(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         accounts = self.config_entry.options.get(CONF_ACCOUNTS) or []
         if user_input is not None:
             gone = set(user_input.get("remove") or [])
-            return self._save(**{CONF_ACCOUNTS: [a for a in accounts if a.get(CONF_NAME) not in gone]})
+            keep = [a for a in accounts if a.get(CONF_NAME) not in gone and a.get(CONF_FRIEND_OF) not in gone]
+            return self._save(**{CONF_ACCOUNTS: keep})
         names = [a.get(CONF_NAME) for a in accounts]
         return self.async_show_form(
             step_id="remove_account",
@@ -202,7 +255,7 @@ class Ps5StatusOptionsFlow(OptionsFlow):
         errors: dict[str, str] = {}
         placeholders = {"error": ""}
         accounts = {a[CONF_ACCOUNT_ID]: a.get(CONF_NAME, "") for a in self.config_entry.options.get(CONF_ACCOUNTS) or []
-                    if str(a.get(CONF_ACCOUNT_ID) or "").isdigit()}
+                    if a.get(CONF_NPSSO) and str(a.get(CONF_ACCOUNT_ID) or "").isdigit()}
         accounts.update({e.unique_id: e.title for e in self.hass.config_entries.async_entries("playstation_network")
                          if e.unique_id and str(e.unique_id).isdigit() and e.unique_id not in accounts})
         if user_input is not None:

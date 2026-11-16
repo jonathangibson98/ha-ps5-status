@@ -40,7 +40,8 @@
         "title": "PS5 Status",
         "menu_options": {
           "add_account": "Add a PSN account",
-          "remove_account": "Remove a PSN account",
+          "add_friend": "Add a friend",
+          "remove_account": "Remove an account or friend",
           "settings": "Settings",
           "link": "Link for turning on",
           "unlink": "Unlink (stop turning on)"
@@ -77,17 +78,37 @@
         }
       },
       "remove_account": {
-        "title": "Remove PSN accounts",
+        "title": "Remove accounts or friends",
         "data": {
-          "remove": "Accounts to remove"
+          "remove": "Remove (removing your account also removes friends added through it)"
+        }
+      },
+      "add_friend": {
+        "title": "Add a friend",
+        "description": "Which of your accounts is friends with them on PSN?",
+        "data": {
+          "friend_of": "Your account"
+        }
+      },
+      "pick_friend": {
+        "title": "Add a friend",
+        "description": "Pick a friend from {via}'s PSN friends list. When they're on a PS5 while yours is on, they show as who's playing.\n\nTheir PSN privacy settings have to let friends see their online status and what they're playing.",
+        "data": {
+          "account_id": "Friend",
+          "name": "Name to show (blank for their PSN name)"
         }
       }
     },
     "error": {
       "link_failed": "{error}",
-      "bad_account": "The PSN account ID is a long number. Pick your account from the list (add it under Add a PSN account first)."
+      "bad_account": "The PSN account ID is a long number. Pick your account from the list (add it under Add a PSN account first).",
+      "name_taken": "That name is already used. Pick another one."
     },
-    "abort": {}
+    "abort": {
+      "npsso_expired": "That account's NPSSO token expired. Add the account again with a fresh token first.",
+      "psn_down": "PlayStation Network didn't answer. Try again in a minute.",
+      "no_friends": "That account has no PSN friends to pick from."
+    }
   },
   "entity": {
     "sensor": {
