@@ -10,8 +10,8 @@ from custom_components.ps5_status.const import DOMAIN
 from custom_components.ps5_status.ddp import parse_reply
 from custom_components.ps5_status.psn import Presence, PsnAuthError, parse_presence
 
-AWAKE = parse_reply(b"HTTP/1.1 200 Ok\nhost-id:0C7043751C7E\nhost-type:PS5\nhost-name:PS5-512\nsystem-version:09400000\n", "192.168.86.40")
-REST = parse_reply(b"HTTP/1.1 620 Server Standby\nhost-id:0C7043751C7E\nhost-type:PS5\nhost-name:PS5-512\n", "192.168.86.40")
+AWAKE = parse_reply(b"HTTP/1.1 200 Ok\nhost-id:001122AABBCC\nhost-type:PS5\nhost-name:PS5-512\nsystem-version:09400000\n", "192.168.86.40")
+REST = parse_reply(b"HTTP/1.1 620 Server Standby\nhost-id:001122AABBCC\nhost-type:PS5\nhost-name:PS5-512\n", "192.168.86.40")
 ART = "https://image.api.playstation.com/vulcan/roblox.png"
 TOKEN = "a" * 64
 
@@ -38,7 +38,7 @@ async def test_setup_with_npsso(hass):
          patch("custom_components.ps5_status.psn.PsnAccount.async_presence", return_value=Presence()):
         r = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
         r = await hass.config_entries.flow.async_configure(r["flow_id"], {CONF_HOST: "192.168.86.40"})
-        bad = await hass.config_entries.flow.async_configure(r["flow_id"], {"name": "Jon", "npsso": "short"})
+        bad = await hass.config_entries.flow.async_configure(r["flow_id"], {"name": "Alex", "npsso": "short"})
         assert bad["errors"] == {"npsso": "bad_npsso"}
         r = await hass.config_entries.flow.async_configure(r["flow_id"], {"name": "", "npsso": '{"npsso":"%s"}' % TOKEN})
         assert r["type"] is FlowResultType.CREATE_ENTRY
@@ -52,7 +52,7 @@ async def test_refused_npsso(hass):
          patch("custom_components.ps5_status.psn.PsnAccount.async_login", side_effect=PsnAuthError("nope")):
         r = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
         r = await hass.config_entries.flow.async_configure(r["flow_id"], {CONF_HOST: "192.168.86.40"})
-        r = await hass.config_entries.flow.async_configure(r["flow_id"], {"name": "Jon", "npsso": TOKEN})
+        r = await hass.config_entries.flow.async_configure(r["flow_id"], {"name": "Alex", "npsso": TOKEN})
         assert r["errors"] == {"npsso": "bad_npsso"}
 
 
@@ -62,7 +62,7 @@ async def test_whos_playing(hass):
     from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
     presences = {
-        "J" * 64: Presence(online=True, platform="PS5"),  # Jon on the home screen
+        "J" * 64: Presence(online=True, platform="PS5"),  # Alex on the home screen
         "V" * 64: Presence(online=True, platform="PS5", title="Roblox", title_id="PPSA01", image=ART),
     }
 
@@ -72,8 +72,8 @@ async def test_whos_playing(hass):
     async def fake_login(self):
         return None
 
-    entry = MockConfigEntry(domain=DOMAIN, unique_id="0C7043751C7E", title="PS5-512", data={CONF_HOST: "192.168.86.40"},
-                            options={"accounts": [{"name": "Jon", "npsso": "J" * 64}, {"name": "Von", "npsso": "V" * 64}],
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="001122AABBCC", title="PS5-512", data={CONF_HOST: "192.168.86.40"},
+                            options={"accounts": [{"name": "Alex", "npsso": "J" * 64}, {"name": "Chris", "npsso": "V" * 64}],
                                      "psn_entity": "", "scan_interval": 5, "psn_interval": 30, "off_after": 1})
     entry.add_to_hass(hass)
     answer = {"r": AWAKE}
@@ -88,10 +88,10 @@ async def test_whos_playing(hass):
         await hass.async_block_till_done()
         mp = hass.states.get("media_player.ps5_512")
         assert mp.state == "playing" and mp.attributes["media_title"] == "Roblox"
-        assert mp.attributes["whos_playing"] == "Von" and mp.attributes["media_artist"] == "Von"
-        assert mp.attributes["players"] == ["Jon", "Von"]
+        assert mp.attributes["whos_playing"] == "Chris" and mp.attributes["media_artist"] == "Chris"
+        assert mp.attributes["players"] == ["Alex", "Chris"]
         assert mp.attributes["entity_picture"].startswith("/api/media_player_proxy/media_player.ps5_512")
-        assert hass.states.get("sensor.ps5_512_who_s_playing").state == "Von"
+        assert hass.states.get("sensor.ps5_512_who_s_playing").state == "Chris"
 
         # console goes to rest mode: nobody's playing, even though PSN still says Roblox
         answer["r"] = REST
@@ -109,8 +109,8 @@ async def test_picture_downloaded_from_sony(hass, aioclient_mock):
     async def fake_login(self):
         return None
 
-    entry = MockConfigEntry(domain=DOMAIN, unique_id="0C7043751C7E", title="PS5-512", data={CONF_HOST: "192.168.86.40"},
-                            options={"accounts": [{"name": "Von", "npsso": "V" * 64}], "scan_interval": 5})
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="001122AABBCC", title="PS5-512", data={CONF_HOST: "192.168.86.40"},
+                            options={"accounts": [{"name": "Chris", "npsso": "V" * 64}], "scan_interval": 5})
     entry.add_to_hass(hass)
     with patch("custom_components.ps5_status.coordinator.async_query", return_value=AWAKE), \
          patch("custom_components.ps5_status.psn.PsnAccount.async_login", fake_login), \
@@ -137,8 +137,8 @@ async def test_add_friend_and_track(hass):
     async def fake_presence(self, account_id="me"):
         return presences[account_id]
 
-    entry = MockConfigEntry(domain=DOMAIN, unique_id="0C7043751C7E", title="PS5-512", data={CONF_HOST: "192.168.86.40"},
-                            options={"accounts": [{"name": "Jon", "npsso": "J" * 64, "account_id": "1111111111111111111"}],
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="001122AABBCC", title="PS5-512", data={CONF_HOST: "192.168.86.40"},
+                            options={"accounts": [{"name": "Alex", "npsso": "J" * 64, "account_id": "1111111111111111111"}],
                                      "psn_entity": "", "scan_interval": 5, "psn_interval": 30, "off_after": 3})
     entry.add_to_hass(hass)
     with patch("custom_components.ps5_status.coordinator.async_query", return_value=AWAKE), \
@@ -147,26 +147,26 @@ async def test_add_friend_and_track(hass):
          patch("custom_components.ps5_status.psn.PsnAccount.async_presence", fake_presence):
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
-        assert hass.states.get("media_player.ps5_512").state == "on"  # Jon's offline, nobody playing
+        assert hass.states.get("media_player.ps5_512").state == "on"  # Alex's offline, nobody playing
 
         r = await hass.config_entries.options.async_init(entry.entry_id)
         assert r["menu_options"] == ["add_account", "add_friend", "remove_account", "settings", "link"]
         r = await hass.config_entries.options.async_configure(r["flow_id"], {"next_step_id": "add_friend"})
         assert r["step_id"] == "pick_friend"  # only one account, so it skips straight to the friends list
-        r = await hass.config_entries.options.async_configure(r["flow_id"], {"account_id": "2222222222222222222", "name": "Jon"})
+        r = await hass.config_entries.options.async_configure(r["flow_id"], {"account_id": "2222222222222222222", "name": "Alex"})
         assert r["errors"] == {"name": "name_taken"}
-        r = await hass.config_entries.options.async_configure(r["flow_id"], {"account_id": "2222222222222222222", "name": "Von"})
+        r = await hass.config_entries.options.async_configure(r["flow_id"], {"account_id": "2222222222222222222", "name": "Chris"})
         assert r["type"] is FlowResultType.CREATE_ENTRY
         await hass.async_block_till_done()
         friend = entry.options["accounts"][1]
-        assert friend["friend_of"] == "Jon" and friend["account_id"] == "2222222222222222222" and "npsso" not in friend
+        assert friend["friend_of"] == "Alex" and friend["account_id"] == "2222222222222222222" and "npsso" not in friend
 
         mp = hass.states.get("media_player.ps5_512")
-        assert mp.state == "playing" and mp.attributes["whos_playing"] == "Von" and mp.attributes["media_title"] == "Roblox"
+        assert mp.state == "playing" and mp.attributes["whos_playing"] == "Chris" and mp.attributes["media_title"] == "Roblox"
 
-        # removing Jon takes Von with him (Von was tracked through Jon's sign-in)
+        # removing Alex takes Chris with him (Chris was tracked through Alex's sign-in)
         r = await hass.config_entries.options.async_init(entry.entry_id)
         r = await hass.config_entries.options.async_configure(r["flow_id"], {"next_step_id": "remove_account"})
-        r = await hass.config_entries.options.async_configure(r["flow_id"], {"remove": ["Jon"]})
+        r = await hass.config_entries.options.async_configure(r["flow_id"], {"remove": ["Alex"]})
         await hass.async_block_till_done()
         assert entry.options["accounts"] == []

@@ -9,7 +9,7 @@ Your PS5's **real power state** (on, rest mode, off) straight from your home net
 | `media_player.<ps5>` | **off**, **standby** (rest mode), **on**, or **playing** with the game title and cover art. Works in any media card. Its power button turns the PS5 on once it's linked |
 | `sensor.<ps5>_power` | On / Rest mode / Off |
 | `sensor.<ps5>_now_playing` | The game, empty when nothing is playing |
-| `sensor.<ps5>_who_s_playing` | Which of your PSN accounts is on the console (Jon, Von...) |
+| `sensor.<ps5>_who_s_playing` | Which of your PSN accounts is on the console (Alex, Chris...) |
 | `binary_sensor.<ps5>_awake` | On while the console is awake |
 | `binary_sensor.<ps5>_playing_a_game` | On while a game is running |
 | `image.<ps5>_game_picture` | The game's picture, for picture cards and wallpapers |
@@ -28,7 +28,7 @@ Your PS5's **real power state** (on, rest mode, off) straight from your home net
 1. **Get an NPSSO token**: sign in at [playstation.com](https://www.playstation.com), then in the same browser open [ca.account.sony.com/api/v1/ssocookie](https://ca.account.sony.com/api/v1/ssocookie). Copy the 64-character code (or the whole `{"npsso":"..."}` line). Tokens last about 2 months.
 2. **HACS**: HACS > ⋮ > **Custom repositories**, add `https://github.com/jonathangibson98/ha-ps5-status` with type **Integration**, then search for **PS5 Status** and download it. Restart Home Assistant.
    Or copy `custom_components/ps5_status` into your `/config/custom_components/` folder and restart.
-3. **Settings > Devices & services > Add integration > PS5 Status.** Your PS5 is found on the network: pick it (or type its IP address). Then type a name (like Jon) and paste the NPSSO token, or leave it empty for power only.
+3. **Settings > Devices & services > Add integration > PS5 Status.** Your PS5 is found on the network: pick it (or type its IP address). Then type a name (like Alex) and paste the NPSSO token, or leave it empty for power only.
 4. More people on the same console: **Configure > Add a PSN account** for each, or **Add a friend** to track a friend through your own sign-in (no token from them needed, like the PlayStation Network integration's friend tracking).
 5. Once it works you can **delete the PlayStation Network integration** and any template/universal PS5 players you made to glue things together.
 

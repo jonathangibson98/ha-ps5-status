@@ -11,8 +11,8 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 from custom_components.ps5_status.const import CONF_PSN_ENTITY, DOMAIN
 from custom_components.ps5_status.ddp import parse_reply
 
-AWAKE = parse_reply(b"HTTP/1.1 200 Ok\nhost-id:0C7043751C7E\nhost-type:PS5\nhost-name:PS5-512\nsystem-version:09400000\n", "192.168.86.40")
-REST = parse_reply(b"HTTP/1.1 620 Server Standby\nhost-id:0C7043751C7E\nhost-type:PS5\nhost-name:PS5-512\n", "192.168.86.40")
+AWAKE = parse_reply(b"HTTP/1.1 200 Ok\nhost-id:001122AABBCC\nhost-type:PS5\nhost-name:PS5-512\nsystem-version:09400000\n", "192.168.86.40")
+REST = parse_reply(b"HTTP/1.1 620 Server Standby\nhost-id:001122AABBCC\nhost-type:PS5\nhost-name:PS5-512\n", "192.168.86.40")
 PSN = "media_player.playstation_5_console"
 ART = "https://image.api.playstation.com/vulcan/ap/rnd/nhl26.png"
 
@@ -29,7 +29,7 @@ async def test_setup_flow_discovered(hass):
         r = await hass.config_entries.flow.async_configure(r["flow_id"], {})  # power only, PSN added later
         assert r["type"] is FlowResultType.CREATE_ENTRY and r["title"] == "PS5-512"
         assert r["data"] == {CONF_HOST: "192.168.86.40"} and r["options"]["accounts"] == []
-        assert r["result"].unique_id == "0C7043751C7E"
+        assert r["result"].unique_id == "001122AABBCC"
         # the same console again is refused
         r = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
         assert r["step_id"] == "manual"  # nothing new found, so it asks for an IP
@@ -47,7 +47,7 @@ async def test_manual_no_answer(hass):
 
 async def test_entities_follow_console(hass):
     hass.states.async_set(PSN, "playing", {"media_title": "NHL 26", "entity_picture": ART})
-    entry = MockConfigEntry(domain=DOMAIN, unique_id="0C7043751C7E", title="PS5-512",
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="001122AABBCC", title="PS5-512",
                             data={CONF_HOST: "192.168.86.40"}, options={CONF_PSN_ENTITY: PSN, "scan_interval": 5, "off_after": 3})
     entry.add_to_hass(hass)
     answer = {"r": AWAKE}
@@ -113,7 +113,7 @@ async def test_entities_follow_console(hass):
 
 
 async def test_options(hass):
-    entry = MockConfigEntry(domain=DOMAIN, unique_id="0C7043751C7E", title="PS5-512",
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="001122AABBCC", title="PS5-512",
                             data={CONF_HOST: "192.168.86.40"}, options={CONF_PSN_ENTITY: "", "scan_interval": 5, "off_after": 3})
     entry.add_to_hass(hass)
     hass.states.async_set(PSN, "on", {})
@@ -147,7 +147,7 @@ async def test_any_media_player_source_and_picture(hass):
 
     src = "media_player.living_room_tv"
     hass.states.async_set(src, "playing", {"app_name": "Astro Bot", "entity_picture": "/api/media_player_proxy/media_player.living_room_tv?token=x&cache=1"})
-    entry = MockConfigEntry(domain=DOMAIN, unique_id="0C7043751C7E", title="PS5-512",
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="001122AABBCC", title="PS5-512",
                             data={CONF_HOST: "192.168.86.40"}, options={CONF_PSN_ENTITY: src, "scan_interval": 5, "off_after": 3})
     entry.add_to_hass(hass)
     fake = FakeSource()
@@ -169,7 +169,7 @@ async def test_link_then_turn_on(hass):
     hass.states.async_set(PSN, "on", {})
     psn_entry = MockConfigEntry(domain="playstation_network", unique_id="1234567890123456789", title="JonG98")
     psn_entry.add_to_hass(hass)
-    entry = MockConfigEntry(domain=DOMAIN, unique_id="0C7043751C7E", title="PS5-512",
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="001122AABBCC", title="PS5-512",
                             data={CONF_HOST: "192.168.86.40"}, options={CONF_PSN_ENTITY: PSN, "scan_interval": 5, "off_after": 3})
     entry.add_to_hass(hass)
     answer = {"r": REST}

@@ -5,8 +5,8 @@ import pytest_socket
 
 from custom_components.ps5_status.ddp import async_query, parse_reply
 
-AWAKE = b"HTTP/1.1 200 Ok\nhost-id:0C7043751C7E\nhost-type:PS5\nhost-name:PS5-512\nhost-request-port:997\nsystem-version:09400000\n"
-REST = b"HTTP/1.1 620 Server Standby\nhost-id:0C7043751C7E\nhost-type:PS5\nhost-name:PS5-512\n"
+AWAKE = b"HTTP/1.1 200 Ok\nhost-id:001122AABBCC\nhost-type:PS5\nhost-name:PS5-512\nhost-request-port:997\nsystem-version:09400000\n"
+REST = b"HTTP/1.1 620 Server Standby\nhost-id:001122AABBCC\nhost-type:PS5\nhost-name:PS5-512\n"
 
 
 class FakePs5(asyncio.DatagramProtocol):
@@ -30,7 +30,7 @@ async def _serve(answer):
 
 def test_parse():
     r = parse_reply(AWAKE, "10.0.0.5")
-    assert r.awake and not r.standby and r.host_name == "PS5-512" and r.host_id == "0C7043751C7E" and r.host_type == "PS5"
+    assert r.awake and not r.standby and r.host_name == "PS5-512" and r.host_id == "001122AABBCC" and r.host_type == "PS5"
     assert parse_reply(REST, "x").standby
     assert parse_reply(b"garbage", "x") is None
 

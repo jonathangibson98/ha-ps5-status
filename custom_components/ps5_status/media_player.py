@@ -71,7 +71,7 @@ class Ps5MediaPlayer(Ps5Entity, MediaPlayerEntity):
 
     @property
     def media_artist(self) -> str | None:
-        # media cards show this under the title: "Roblox / Von"
+        # media cards show this under the title: "Roblox / Chris"
         return self.coordinator.data.whos_playing if self.coordinator.data.game else None
 
     @property

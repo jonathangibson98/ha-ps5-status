@@ -19,7 +19,7 @@
         "title": "Sign in to PlayStation Network",
         "description": "The PS5 doesn't tell your network what's playing, so PS5 Status asks PlayStation Network itself. No PlayStation Network integration needed.\n\n1. Sign in at [playstation.com]({psn_url}) in a browser.\n2. In the same browser open [this Sony page]({npsso_url}). It shows a short line with npsso and a long code.\n3. Paste the 64-character code (or the whole line) below.\n\nAdd more accounts later (roommates, guests) under Configure, so it shows who's playing on {name}. Leave it empty for power only.",
         "data": {
-          "name": "Name to show (like Jon)",
+          "name": "Name to show (like Alex)",
           "npsso": "NPSSO token"
         }
       }
@@ -73,7 +73,7 @@
         "title": "Add a PSN account",
         "description": "Whoever of these accounts is signed in on the PS5 shows as who's playing.\n\nSign in as that person at [playstation.com]({psn_url}), then open [this Sony page]({npsso_url}) and paste the code. Tokens last about 2 months; when one stops working, add it again with the same name to replace it.",
         "data": {
-          "name": "Name to show (like Von)",
+          "name": "Name to show (like Chris)",
           "npsso": "NPSSO token"
         }
       },
