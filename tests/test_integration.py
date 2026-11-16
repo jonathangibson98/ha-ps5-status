@@ -26,9 +26,9 @@ async def test_setup_flow_discovered(hass):
         assert r["type"] is FlowResultType.FORM and r["step_id"] == "user"
         r = await hass.config_entries.flow.async_configure(r["flow_id"], {CONF_HOST: "192.168.86.40"})
         assert r["step_id"] == "psn"
-        r = await hass.config_entries.flow.async_configure(r["flow_id"], {CONF_PSN_ENTITY: PSN})
+        r = await hass.config_entries.flow.async_configure(r["flow_id"], {})  # power only, PSN added later
         assert r["type"] is FlowResultType.CREATE_ENTRY and r["title"] == "PS5-512"
-        assert r["data"] == {CONF_HOST: "192.168.86.40"} and r["options"][CONF_PSN_ENTITY] == PSN
+        assert r["data"] == {CONF_HOST: "192.168.86.40"} and r["options"]["accounts"] == []
         assert r["result"].unique_id == "0C7043751C7E"
         # the same console again is refused
         r = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
@@ -121,9 +121,10 @@ async def test_options(hass):
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
         r = await hass.config_entries.options.async_init(entry.entry_id)
-        assert r["type"] is FlowResultType.MENU and r["menu_options"] == ["settings", "link"]
+        assert r["type"] is FlowResultType.MENU and r["menu_options"] == ["add_account", "settings", "link"]
         r = await hass.config_entries.options.async_configure(r["flow_id"], {"next_step_id": "settings"})
-        r = await hass.config_entries.options.async_configure(r["flow_id"], {CONF_PSN_ENTITY: PSN, "scan_interval": 10, "off_after": 2})
+        r = await hass.config_entries.options.async_configure(r["flow_id"], {CONF_PSN_ENTITY: PSN, "scan_interval": 10,
+                                                                             "psn_interval": 30, "off_after": 2})
         assert r["type"] is FlowResultType.CREATE_ENTRY
         await hass.async_block_till_done()
         assert entry.options[CONF_PSN_ENTITY] == PSN and entry.runtime_data.update_interval == timedelta(seconds=10)

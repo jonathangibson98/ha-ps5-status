@@ -70,6 +70,15 @@ class Ps5MediaPlayer(Ps5Entity, MediaPlayerEntity):
         return await self.coordinator.async_source_image()
 
     @property
+    def media_artist(self) -> str | None:
+        # media cards show this under the title: "Roblox / Von"
+        return self.coordinator.data.whos_playing if self.coordinator.data.game else None
+
+    @property
+    def media_content_id(self) -> str | None:
+        return self.coordinator.data.game_id
+
+    @property
     def app_name(self) -> str | None:
         return self.coordinator.data.game
 
@@ -80,5 +89,14 @@ class Ps5MediaPlayer(Ps5Entity, MediaPlayerEntity):
     @property
     def extra_state_attributes(self) -> dict:
         d = self.coordinator.data
-        return {"power": d.power, "game_source": self.coordinator.psn_entity or None,
-                "can_turn_on": bool(self.coordinator.regist_key), "ip_address": self._host}
+        c = self.coordinator
+        return {
+            "power": d.power,
+            "whos_playing": d.whos_playing,
+            "players": d.players,
+            "game_id": d.game_id,
+            "game_source": "built-in PSN" if c.uses_builtin_psn else (c.psn_entity or None),
+            "psn_problem": d.psn_problem,
+            "can_turn_on": bool(c.regist_key),
+            "ip_address": self._host,
+        }
