@@ -29,7 +29,7 @@ Your PS5's **real power state** (on, rest mode, off) straight from your home net
 2. **HACS**: HACS > ⋮ > **Custom repositories**, add `https://github.com/jonathangibson98/ha-ps5-status` with type **Integration**, then search for **PS5 Status** and download it. Restart Home Assistant.
    Or copy `custom_components/ps5_status` into your `/config/custom_components/` folder and restart.
 3. **Settings > Devices & services > Add integration > PS5 Status.** Your PS5 is found on the network: pick it (or type its IP address). Then type a name (like Jon) and paste the NPSSO token, or leave it empty for power only.
-4. More people on the same console: **Configure > Add a PSN account** for each.
+4. More people on the same console: **Configure > Add a PSN account** for each, or **Add a friend** to track a friend through your own sign-in (no token from them needed, like the PlayStation Network integration's friend tracking).
 5. Once it works you can **delete the PlayStation Network integration** and any template/universal PS5 players you made to glue things together.
 
 ## Turning it on
@@ -56,6 +56,7 @@ Turning it **off** (rest mode) isn't supported: the PS5 only accepts that inside
 | Option | Default | What |
 |---|---|---|
 | Add / Remove a PSN account | | The accounts whose game and name show up |
+| Add a friend | | Pick someone from your PSN friends list. Their privacy settings must let friends see their online status and game |
 | Check PSN every | 30 s | Only while the PS5 is on. PSN rate-limits, so keep it 30 s or more |
 | Game source media player | empty | The old way: the game comes from another media player. Ignored once a PSN account is added |
 | Check every | 5 s | How often the PS5 is asked |
@@ -120,6 +121,7 @@ Replace `ps5_512` with your console's name (it's the name the PS5 gives itself, 
 ## Limits
 
 - It can turn the PS5 on, not off (see above).
+- Friends: PSN says a friend is on *a* PS5, not *which* one. If they're gaming on their own console at their place while yours is on, they'll show as playing yours. Your own accounts always win over friends.
 - NPSSO tokens expire after about 2 months. When one does, the media player's `psn_problem` attribute says so: **Configure > Add a PSN account** with the same name and a fresh token replaces it.
 - Your PSN privacy settings have to let your online status and what you're playing be seen, and it updates on PSN's schedule (about 30 seconds).
 

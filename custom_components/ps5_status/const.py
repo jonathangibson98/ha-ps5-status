@@ -10,6 +10,7 @@ CONF_OFF_AFTER = "off_after"
 CONF_ACCOUNTS = "accounts"      # built-in PSN sign-ins: [{"name": "Jon", "npsso": "..."}]
 CONF_NAME = "name"
 CONF_NPSSO = "npsso"
+CONF_FRIEND_OF = "friend_of"   # a friend is tracked through one of your signed-in accounts
 CONF_PSN_INTERVAL = "psn_interval"
 
 DEFAULT_SCAN_INTERVAL = 5   # seconds between status checks
