@@ -12,7 +12,10 @@ from .entity import Ps5Entity
 
 async def async_setup_entry(hass: HomeAssistant, entry: Ps5ConfigEntry, add: AddConfigEntryEntitiesCallback) -> None:
     c = entry.runtime_data
-    add([Ps5PowerSensor(c), Ps5GameSensor(c)])
+    ents = [Ps5PowerSensor(c), Ps5GameSensor(c)]
+    if c.uses_builtin_psn:
+        ents.append(Ps5PlayerSensor(c))
+    add(ents)
 
 
 class Ps5PowerSensor(Ps5Entity, SensorEntity):
@@ -42,3 +45,21 @@ class Ps5GameSensor(Ps5Entity, SensorEntity):
     @property
     def native_value(self) -> str | None:
         return self.coordinator.data.game
+
+
+class Ps5PlayerSensor(Ps5Entity, SensorEntity):
+    """Which of your PSN accounts is on the console (only with PS5 Status's own PSN sign-ins)."""
+
+    _attr_translation_key = "whos_playing"
+    _attr_icon = "mdi:account-circle"
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator, "whos_playing")
+
+    @property
+    def native_value(self) -> str | None:
+        return self.coordinator.data.whos_playing
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {"players": self.coordinator.data.players}
